@@ -1,0 +1,8 @@
+sales:
+  version: VERSION
+  js:
+    js/sales.js: {}
+  dependencies:
+    - core/jquery
+    - core/jquery.once
+    - core/drupal

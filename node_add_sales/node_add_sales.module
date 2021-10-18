@@ -1,0 +1,111 @@
+<?php
+
+/**
+ * @file
+ * Contains node_add_sales.module.
+ */
+
+use Drupal\Core\Routing\RouteMatchInterface;
+use Drupal\Core\Form\FormStateInterface;
+
+/**
+ * Implements hook_help().
+ */
+function node_add_sales_help($route_name, RouteMatchInterface $route_match) {
+  switch ($route_name) {
+    // Main module help for the node_add_sales module.
+    case 'help.page.node_add_sales':
+      $output = '';
+      $output .= '<h3>' . t('About') . '</h3>';
+      $output .= '<p>' . t('A modules that does tweaks to sales nodes.') . '</p>';
+      return $output;
+
+    default:
+  }
+}
+
+/**
+ * Implements hook_form_BASE_FORM_ID_alter().
+ */
+function node_add_sales_form_node_form_alter(&$form, FormStateInterface &$form_state, $form_id) {
+  if (in_array($form_id, ['node_sales_form', 'node_sales_edit_form'])) {
+      /* @var Drupal\Core\Entity\FieldableEntityInterface $node */
+    $node = $form_state->getFormObject()->getEntity();
+    if ($node->bundle() === 'sales') {
+      $form['field_s_totalcost']['#disabled'] = TRUE;
+      
+      // Business Logic:
+      // Total Cost	field_s_totalcost	Number (decimal) =
+      // Catering	field_s_catering	Number (decimal) + 
+      // Ground	field_s_ground	Number (decimal) +
+      // Vendor Cost	field_s_vcost	Number (decimal) 
+      $total = 0;
+      $sum_fields = [
+        'field_s_catering',
+        'field_s_ground',
+        'field_s_vcost',
+      ];
+      
+      foreach ($sum_fields as $field) {
+        if (
+          $node->hasField($field) &&
+          !$node->get($field)->isEmpty()
+        ) {
+          $values = $node->get($field)->getValue();
+          foreach ($values as $value) {
+            if (!empty($value) && !empty($value['value'])) {
+              $total += floatval($value['value']);
+            }
+          }
+        }
+      }
+      if ($node->hasField('field_s_totalcost')) {
+        $node->set('field_s_totalcost', $total);
+        $form['field_s_totalcost']['widget'][0]['value']['#default_value'] = $total;
+      }
+
+      $form['#attached']['drupalSettings']['node_add_settings'] = [
+        'sum_fields' => $sum_fields,
+        'total_field' => 'field_s_totalcost',
+      ];
+      $form['#attached']['library'][] = 'node_add_sales/sales';
+
+      // Add a custom submit handler.
+      $form['actions']['submit']['#submit'][] = 'node_add_sales_addition';
+    }
+  }
+}
+
+/**
+ * Custom form submit handler.
+ */
+function node_add_sales_addition($form, FormStateInterface $form_state) {
+      // Business Logic:
+      // Total Cost	field_s_totalcost	Number (decimal) =
+      // Catering	field_s_catering	Number (decimal) + 
+      // Ground	field_s_ground	Number (decimal) +
+      // Vendor Cost	field_s_vcost	Number (decimal) 
+      $total = 0;
+      $sum_fields = [
+        'field_s_catering',
+        'field_s_ground',
+        'field_s_vcost',
+      ];
+      
+      foreach ($sum_fields as $field) {
+        if (!empty($form_state->getValue($field))) {
+          $values = $form_state->getValue($field);;
+          foreach ($values as $value) {
+            if (!empty($value) && !empty($value['value'])) {
+              $total += floatval($value['value']);
+            }
+          }
+          }
+          
+      }
+      $node = $form_state->getFormObject()->getEntity();
+      if ($node->hasField('field_s_totalcost')) {
+        $node->set('field_s_totalcost', $total);
+        $node->save();
+      }
+}

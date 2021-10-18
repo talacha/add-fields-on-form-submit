@@ -1,0 +1,7 @@
+name: 'Node Add Sales'
+type: module
+description: 'Custom tweaks for the sales nodes'
+package: Custom
+core_version_requirement: ^8 || ^9
+tags:
+ - developer
